@@ -29,6 +29,15 @@ public interface CodeReview_d_ts {
     }
   }
 
+  @JSFunctor interface InlineDiffFactory extends JSObject {
+    JsInlineDiffView create(EditArgs args);
+
+    class Setter {
+      @JSBody(params = {"f"}, script = "newInlineDiff = f;")
+      public static native void setDiff(InlineDiffFactory f);
+    }
+  }
+
   static void main(String[] args) {
 //    LoggingJs.Setter.set();
     JsTextModel.Api.install();
@@ -37,5 +46,6 @@ public interface CodeReview_d_ts {
     WebGraphics.setApi();
     EditorFactory.Setter.setApi(JsCodeEditor::newEdit);
     CodeReviewFactory.Setter.setDiff(JsCodeReview::newCodeReview);
+    InlineDiffFactory.Setter.setDiff(JsInlineDiff::newInlineDiff);
   }
 }

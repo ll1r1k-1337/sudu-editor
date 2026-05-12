@@ -297,7 +297,7 @@ export interface NotificationsProvider {
 }
 
 export interface ViewController {
-  getViewType(): 'folderDiff' | 'fileDiff' | 'editor'
+  getViewType(): 'folderDiff' | 'fileDiff' | 'inlineDiff' | 'editor'
 
   canNavigateUp(): boolean
 
@@ -379,6 +379,20 @@ export interface FileDiffViewController extends ViewController {
   getViewType(): 'fileDiff'
 }
 
+export interface InlineDiffViewController extends ViewController {
+  setCompactView(compact: boolean): void;
+
+  getViewType(): 'inlineDiff'
+}
+
+export interface DiffSizeChangeCallback {
+  (
+    numLines: number,
+    lineHeight: number,
+    cssLineHeight: number
+  ): void
+}
+
 export interface IEditorView extends View, HasTheme, Focusable {
   setText(text: string): void,
 
@@ -415,6 +429,20 @@ export interface IEditorView extends View, HasTheme, Focusable {
 
 export interface EditorView extends IEditorView, IDisposable {
   setModel(model: ITextModel): void
+}
+
+export interface InlineDiffView extends View, HasTheme, Focusable, TwoPanelDiff, IDisposable {
+  setModel(modelL: ITextModel, modelR: ITextModel): void
+
+  getLeftModel(): ITextModel
+
+  getRightModel(): ITextModel
+
+  getController(): InlineDiffViewController;
+
+  onControllerUpdate: IEvent<InlineDiffViewController>
+
+  setDiffSizeListener(cb: DiffSizeChangeCallback): void
 }
 
 export const enum DiffType {

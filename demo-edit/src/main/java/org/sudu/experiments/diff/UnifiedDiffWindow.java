@@ -3,6 +3,7 @@ package org.sudu.experiments.diff;
 import org.sudu.experiments.Debug;
 import org.sudu.experiments.FileHandle;
 import org.sudu.experiments.SplitInfo;
+import org.sudu.experiments.editor.EditorConst;
 import org.sudu.experiments.editor.UnifiedDiffView;
 import org.sudu.experiments.editor.Model;
 import org.sudu.experiments.editor.Uri;
@@ -28,16 +29,25 @@ public class UnifiedDiffWindow extends ToolWindow0
   Window window;
   Focusable focusSave;
   boolean processEsc = true;
+  boolean canSelectFiles = true;
 
   public UnifiedDiffWindow(
       WindowManager wm,
       EditorColorScheme theme,
       Supplier<String[]> fonts
   ) {
+    this(wm, theme, fonts, EditorConst.DEFAULT_DISABLE_PARSER);
+  }
+
+  public UnifiedDiffWindow(
+      WindowManager wm,
+      EditorColorScheme theme,
+      Supplier<String[]> fonts,
+      boolean disableParser
+  ) {
     super(wm, theme, fonts);
-    rootView = new UnifiedDiffView(wm.uiContext);
+    rootView = new UnifiedDiffView(wm.uiContext, disableParser);
     rootView.setTheme(theme);
-//    var scrollView = new ScrollView(rootView);
     window = createWindow(rootView, 40);
     window.onFocus(this::onFocus);
     window.onBlur(this::onBlur);
@@ -52,11 +62,11 @@ public class UnifiedDiffWindow extends ToolWindow0
   }
 
   private boolean isMyFocus(Focusable f) {
-    return this == f;
+    return this == f || rootView == f;
   }
 
   private void onFocus() {
-    windowManager.uiContext.setFocus(focusSave);
+    windowManager.uiContext.setFocus(focusSave != null ? focusSave : this);
   }
 
   private boolean isMyFocus() {
@@ -83,6 +93,22 @@ public class UnifiedDiffWindow extends ToolWindow0
         }, System.err::println);
   }
 
+  public void setModel(Model left, Model right) {
+    rootView.setModel(left, right);
+  }
+
+  public Model getLeftModel() {
+    return rootView.getLeftModel();
+  }
+
+  public Model getRightModel() {
+    return rootView.getRightModel();
+  }
+
+  public void setReadonly(boolean leftReadonly, boolean rightReadonly) {
+    rootView.setReadonly(leftReadonly, rightReadonly);
+  }
+
   protected void dispose() {
     if (isMyFocus()) {
       windowManager.uiContext.setFocus(null);
@@ -93,6 +119,7 @@ public class UnifiedDiffWindow extends ToolWindow0
   }
 
   protected Supplier<ToolbarItem[]> popupActions(V2i pos) {
+    if (!canSelectFiles) return null;
     return ArrayOp.supplier(
         opener("open left", true),
         opener("open right", false)
@@ -129,18 +156,18 @@ public class UnifiedDiffWindow extends ToolWindow0
   }
 
   public boolean canNavigateDown() {
-    return false; // rootView.canNavigateDown(focused());
+    return rootView.canNavigateDown();
   }
 
   public void navigateDown() {
-//    rootView.navigateDown(focused());
+    rootView.navigateDown();
   }
 
   public boolean canNavigateUp() {
-    return false; // rootView.canNavigateUp(focused());
+    return rootView.canNavigateUp();
   }
 
   public void navigateUp() {
-//    rootView.navigateUp(focused());
+    rootView.navigateUp();
   }
 }

@@ -6,7 +6,7 @@ import { IDisposable } from '@sudu-ide/types';
 import {
   Uri, IEvent, ITextModel,
   View, HasTheme, Theme, Focusable, TwoPanelDiff,
-  EditorView, FileDiffViewController
+  EditorView, FileDiffViewController, InlineDiffViewController
 } from '@sudu-ide/types/frontend';
 
 export * from '@sudu-ide/types';
@@ -66,8 +66,24 @@ export interface CodeReviewView extends IFileDiffView, IDisposable {
   setModel(modelL: ITextModel, modelR: ITextModel): void
 }
 
+export interface InlineDiffView extends View, HasTheme, Focusable, TwoPanelDiff, IDisposable {
+  setModel(modelL: ITextModel, modelR: ITextModel): void
+
+  getLeftModel(): ITextModel
+
+  getRightModel(): ITextModel
+
+  getController(): InlineDiffViewController;
+
+  onControllerUpdate: IEvent<InlineDiffViewController>
+
+  setDiffSizeListener(cb: IDiffSizeChangeCallback): void
+}
+
 export function newTextModel(text: string, language?: string, uri?: Uri): ITextModel
 
 export function newEditor(args: EditArgs): EditorView
 
 export function newCodeReview(args: EditArgs): CodeReviewView
+
+export function newInlineDiff(args: EditArgs): InlineDiffView

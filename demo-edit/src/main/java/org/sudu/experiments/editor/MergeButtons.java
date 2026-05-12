@@ -254,6 +254,8 @@ public class MergeButtons implements Disposable {
           buttonHitTest(event.position, btLine, x0, sizeX1 + sizeX2);
       if (hit) {
         hoverBtIndex = i;
+        hoverBtLine = btDocLine;
+        hoverBtAccept = !isAcceptReject() || buttonHitTest(event.position, btLine, x0, sizeX1);
         setCursor.setDefault();
         return MouseListener.Static.emptyConsumer;
       }
@@ -291,7 +293,7 @@ public class MergeButtons implements Disposable {
     hoverBtLine = hoverBtIndex = -1;
     if (r != null) r.run();
     if (bc != null) bc.accept(hoverBtAccept);
-    return r != null;
+    return r != null || bc != null;
   }
 
   public boolean hitTest(V2i point) {
