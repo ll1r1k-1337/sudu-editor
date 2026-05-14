@@ -29,6 +29,15 @@ public interface CodeReview_d_ts {
     }
   }
 
+  @JSFunctor interface InlineCodeReviewFactory extends JSObject {
+    JsCodeReviewView create(EditArgs args);
+
+    class Setter {
+      @JSBody(params = {"f"}, script = "newInlineCodeReview = f;")
+      public static native void setApi(InlineCodeReviewFactory f);
+    }
+  }
+
   static void main(String[] args) {
 //    LoggingJs.Setter.set();
     JsTextModel.Api.install();
@@ -37,5 +46,6 @@ public interface CodeReview_d_ts {
     WebGraphics.setApi();
     EditorFactory.Setter.setApi(JsCodeEditor::newEdit);
     CodeReviewFactory.Setter.setDiff(JsCodeReview::newCodeReview);
+    InlineCodeReviewFactory.Setter.setApi(JsInlineCodeReview::newInlineCodeReview);
   }
 }

@@ -66,8 +66,17 @@ export interface CodeReviewView extends IFileDiffView, IDisposable {
   setModel(modelL: ITextModel, modelR: ITextModel): void
 }
 
+// Inline (unified) code review view. Renders one editor pane where insertions
+// are highlighted in place and deletions show as red ghost rows above edited
+// hunks. v1 is read-only; getController().getViewType() === 'inlineFileDiff'.
+export interface InlineCodeReviewView extends IFileDiffView, IDisposable {
+  setModel(modelL: ITextModel, modelR: ITextModel): void
+}
+
 export function newTextModel(text: string, language?: string, uri?: Uri): ITextModel
 
 export function newEditor(args: EditArgs): EditorView
 
 export function newCodeReview(args: EditArgs): CodeReviewView
+
+export function newInlineCodeReview(args: EditArgs): InlineCodeReviewView
