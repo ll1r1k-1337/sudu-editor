@@ -11,6 +11,10 @@ import org.sudu.experiments.editor.worker.diff.DiffRange;
 // as insertions). Default ranges contribute only their right rows.
 public final class InlineDocumentBuilder {
 
+  // Side codes used by Result.originSide.
+  public static final int SIDE_RIGHT = 0;
+  public static final int SIDE_LEFT = 1;
+
   public static final class Result {
     public final CodeLine[] lines;
     public final LineDiff[] diffs;
@@ -22,11 +26,17 @@ public final class InlineDocumentBuilder {
     public final int[] rangeStartRows;
     public final int[] rangeEndRows;
     public final int[] rangeTypes;
+    // Per-synthetic-row reverse mapping back to the originating Document.
+    // originSide[row] is SIDE_LEFT or SIDE_RIGHT; originLine[row] is the
+    // line index in that origin Document. Length == lines.length.
+    public final int[] originSide;
+    public final int[] originLine;
 
     public Result(
         CodeLine[] lines, LineDiff[] diffs,
         int[] hunkAnchorRows, int[] hunkEndRows, int[] hunkRangeIndices,
-        int[] rangeStartRows, int[] rangeEndRows, int[] rangeTypes
+        int[] rangeStartRows, int[] rangeEndRows, int[] rangeTypes,
+        int[] originSide, int[] originLine
     ) {
       this.lines = lines;
       this.diffs = diffs;
@@ -36,6 +46,8 @@ public final class InlineDocumentBuilder {
       this.rangeStartRows = rangeStartRows;
       this.rangeEndRows = rangeEndRows;
       this.rangeTypes = rangeTypes;
+      this.originSide = originSide;
+      this.originLine = originLine;
     }
 
     public int hunkCount() {
@@ -61,6 +73,8 @@ public final class InlineDocumentBuilder {
     int[] rangeStartRows = new int[n];
     int[] rangeEndRows = new int[n];
     int[] rangeTypes = new int[n];
+    int[] originSide = new int[size];
+    int[] originLine = new int[size];
 
     int row = 0;
     int hunk = 0;
@@ -69,17 +83,17 @@ public final class InlineDocumentBuilder {
       int startRow = row;
       switch (r.type) {
         case DiffTypes.DEFAULT -> {
-          row = copyRight(mR, r, lines, diffs, row, null);
+          row = copyRight(mR, r, lines, diffs, row, null, originSide, originLine);
         }
         case DiffTypes.INSERTED -> {
-          row = copyRight(mR, r, lines, diffs, row, DiffTypes.INSERTED);
+          row = copyRight(mR, r, lines, diffs, row, DiffTypes.INSERTED, originSide, originLine);
         }
         case DiffTypes.DELETED -> {
-          row = copyLeft(mL, r, lines, diffs, row, DiffTypes.DELETED);
+          row = copyLeft(mL, r, lines, diffs, row, DiffTypes.DELETED, originSide, originLine);
         }
         case DiffTypes.EDITED, DiffTypes.EDITED2 -> {
-          row = copyLeft(mL, r, lines, diffs, row, DiffTypes.DELETED);
-          row = copyRight(mR, r, lines, diffs, row, DiffTypes.INSERTED);
+          row = copyLeft(mL, r, lines, diffs, row, DiffTypes.DELETED, originSide, originLine);
+          row = copyRight(mR, r, lines, diffs, row, DiffTypes.INSERTED, originSide, originLine);
         }
       }
       rangeStartRows[i] = startRow;
@@ -95,7 +109,8 @@ public final class InlineDocumentBuilder {
 
     return new Result(
         lines, diffs, anchors, ends, rangeIdx,
-        rangeStartRows, rangeEndRows, rangeTypes
+        rangeStartRows, rangeEndRows, rangeTypes,
+        originSide, originLine
     );
   }
 
@@ -127,12 +142,15 @@ public final class InlineDocumentBuilder {
   private static int copyRight(
       Model mR, DiffRange r,
       CodeLine[] lines, LineDiff[] diffs,
-      int row, Integer diffType
+      int row, Integer diffType,
+      int[] originSide, int[] originLine
   ) {
     CodeLine[] src = mR.document.lines;
     for (int k = 0; k < r.lenR; k++) {
-      lines[row] = src[r.fromR + k];
+      lines[row] = src[r.fromR + k].copyForInline();
       diffs[row] = diffType == null ? null : new LineDiff(diffType);
+      originSide[row] = SIDE_RIGHT;
+      originLine[row] = r.fromR + k;
       row++;
     }
     return row;
@@ -141,12 +159,15 @@ public final class InlineDocumentBuilder {
   private static int copyLeft(
       Model mL, DiffRange r,
       CodeLine[] lines, LineDiff[] diffs,
-      int row, int diffType
+      int row, int diffType,
+      int[] originSide, int[] originLine
   ) {
     CodeLine[] src = mL.document.lines;
     for (int k = 0; k < r.lenL; k++) {
-      lines[row] = src[r.fromL + k];
+      lines[row] = src[r.fromL + k].copyForInline();
       diffs[row] = new LineDiff(diffType);
+      originSide[row] = SIDE_LEFT;
+      originLine[row] = r.fromL + k;
       row++;
     }
     return row;
