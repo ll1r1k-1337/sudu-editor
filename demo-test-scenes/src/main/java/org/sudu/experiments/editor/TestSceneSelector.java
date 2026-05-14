@@ -56,6 +56,7 @@ public class TestSceneSelector {
       case "UiToolsDemo" -> UiToolsDemo::new;
       case "FolderDiffScene" -> FolderDiffScene::new;
       case "FileDiff" -> FileDiff::new;
+      case "InlineFileDiff" -> InlineFileDiff::new;
 
 //      case "#wasm" -> new WasmDemo(api);
     };
