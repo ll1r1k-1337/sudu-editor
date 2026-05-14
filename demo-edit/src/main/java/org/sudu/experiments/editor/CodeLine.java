@@ -38,6 +38,13 @@ public class CodeLine {
     return new CodeLine(ArrayOp.add(a.elements, b.elements));
   }
 
+  // Returns a structurally independent copy: a fresh elements array so that
+  // mutations on the returned CodeLine (insertAt/deleteAt/...) do not affect
+  // the source. CodeElements are immutable, so sharing them is safe.
+  public CodeLine copyForInline() {
+    return new CodeLine(elements.clone());
+  }
+
   static CodeLine[] makeLines(String[] text) {
     CodeLine[] cl = new CodeLine[Math.max(1, text.length)];
     if (text.length == 0) cl[0] = emptyLine();

@@ -92,8 +92,7 @@ public class JsInlineCodeReview implements JsCodeReviewView {
 
   @Override
   public void setReadonly(boolean leftReadonly, boolean rightReadonly) {
-    // Inline view is read-only in v1; both flags collapse to "readonly".
-    w.rootView.setReadonly(leftReadonly || rightReadonly);
+    w.rootView.setReadonly(leftReadonly, rightReadonly);
   }
 
   @Override

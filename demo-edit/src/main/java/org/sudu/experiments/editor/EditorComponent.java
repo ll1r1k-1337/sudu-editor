@@ -22,6 +22,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
+import java.util.function.IntPredicate;
 
 import static org.sudu.experiments.editor.EditorConst.tabIndent;
 
@@ -102,6 +103,10 @@ public class EditorComponent extends View implements
   MergeButtons mergeButtons;
 
   public boolean readonly = false;
+  // Optional fine-grained gate: if non-null, mutations on a row r are
+  // blocked when readonlyRowPredicate.test(r) is true. The global
+  // `readonly` flag short-circuits everything when it is true.
+  private IntPredicate readonlyRowPredicate;
   boolean mirrored = false;
   private ExternalHighlights externalHighlights;
 
@@ -190,6 +195,26 @@ public class EditorComponent extends View implements
 
   public void setUpdateModelOnDiffListener(TriConsumer<EditorComponent, Diff, Boolean> listener) {
     updateModelOnDiffListener = listener;
+  }
+
+  public void setReadonlyRowPredicate(IntPredicate p) {
+    readonlyRowPredicate = p;
+  }
+
+  // True iff the current caret or selection covers any row marked
+  // read-only by readonlyRowPredicate. Returns false when the predicate
+  // is not installed.
+  private boolean isCurrentEditBlocked() {
+    if (readonlyRowPredicate == null) return false;
+    if (selection().isAreaSelected()) {
+      Pos l = selection().getLeftPos();
+      Pos r = selection().getRightPos();
+      for (int row = l.line; row <= r.line; row++) {
+        if (readonlyRowPredicate.test(row)) return true;
+      }
+      return false;
+    }
+    return readonlyRowPredicate.test(model.caretLine);
   }
 
   public void setOnDiffMadeListener(Consumer<EditorComponent> listener) {
@@ -991,6 +1016,7 @@ public class EditorComponent extends View implements
 
   public boolean handleInsert(String s) {
     if (readonly) return false;
+    if (isCurrentEditBlocked()) return false;
     if (selection().isAreaSelected()) deleteSelectedArea();
     String[] lines = SplitText.split(s);
 
@@ -1705,6 +1731,7 @@ public class EditorComponent extends View implements
 
   public boolean onCopy(Consumer<String> setText, boolean isCut) {
     if (isCut && readonly) return false;
+    if (isCut && isCurrentEditBlocked()) return false;
     var left = selection().getLeftPos();
     int line = left.line;
     String result;
@@ -1757,6 +1784,18 @@ public class EditorComponent extends View implements
 
   private boolean handleEditingKeys(KeyEvent event) {
     if (readonly) return false;
+    if (isCurrentEditBlocked()) return false;
+    // Backspace at column 0 merges into the previous line; delete at line
+    // end merges in the next line. Block those if the neighbour is locked.
+    if (readonlyRowPredicate != null && !selection().isAreaSelected()) {
+      if (event.keyCode == KeyCode.BACKSPACE
+          && model.caretCharPos == 0 && model.caretLine > 0
+          && readonlyRowPredicate.test(model.caretLine - 1)) return false;
+      if (event.keyCode == KeyCode.DELETE
+          && model.caretLine + 1 < model.document.length()
+          && model.caretCharPos == model.document.strLength(model.caretLine)
+          && readonlyRowPredicate.test(model.caretLine + 1)) return false;
+    }
     return switch (event.keyCode) {
       case KeyCode.TAB -> handleTab(event.shift);
       case KeyCode.ENTER -> handleEnter();

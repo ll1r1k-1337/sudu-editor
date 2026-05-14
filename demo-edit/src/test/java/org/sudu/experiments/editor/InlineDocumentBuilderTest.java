@@ -9,6 +9,7 @@ import org.sudu.experiments.editor.worker.diff.DiffRange;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 class InlineDocumentBuilderTest {
@@ -29,6 +30,12 @@ class InlineDocumentBuilderTest {
     assertNull(r.diffs[1]);
     assertNull(r.diffs[2]);
     assertEquals(0, r.hunkCount());
+
+    // Default rows reflect the right doc, line by line.
+    for (int i = 0; i < 3; i++) {
+      assertEquals(InlineDocumentBuilder.SIDE_RIGHT, r.originSide[i]);
+      assertEquals(i, r.originLine[i]);
+    }
   }
 
   @Test
@@ -51,6 +58,13 @@ class InlineDocumentBuilderTest {
     assertEquals(1, r.hunkAnchorRows[0]);
     assertEquals(3, r.hunkEndRows[0]);
     assertEquals(1, r.hunkRangeIndices[0]);
+
+    assertEquals(InlineDocumentBuilder.SIDE_RIGHT, r.originSide[0]);
+    assertEquals(0, r.originLine[0]);
+    assertEquals(InlineDocumentBuilder.SIDE_RIGHT, r.originSide[1]);
+    assertEquals(1, r.originLine[1]);
+    assertEquals(InlineDocumentBuilder.SIDE_RIGHT, r.originSide[2]);
+    assertEquals(2, r.originLine[2]);
   }
 
   @Test
@@ -69,9 +83,17 @@ class InlineDocumentBuilderTest {
     assertType(DiffTypes.DELETED, r.diffs[1]);
     assertType(DiffTypes.DELETED, r.diffs[2]);
 
-    // ghost lines reference left model's CodeLines
-    assertSame(left.document.lines[1], r.lines[1]);
-    assertSame(left.document.lines[2], r.lines[2]);
+    // Ghost rows carry left-side content but are independent CodeLine
+    // instances so synthetic edits cannot corrupt the origin Model.
+    assertEquals(left.document.lines[1].makeString(), r.lines[1].makeString());
+    assertEquals(left.document.lines[2].makeString(), r.lines[2].makeString());
+    assertNotSame(left.document.lines[1], r.lines[1]);
+    assertNotSame(left.document.lines[2], r.lines[2]);
+
+    assertEquals(InlineDocumentBuilder.SIDE_LEFT, r.originSide[1]);
+    assertEquals(1, r.originLine[1]);
+    assertEquals(InlineDocumentBuilder.SIDE_LEFT, r.originSide[2]);
+    assertEquals(2, r.originLine[2]);
 
     assertEquals(1, r.hunkCount());
     assertEquals(1, r.hunkAnchorRows[0]);
@@ -98,13 +120,45 @@ class InlineDocumentBuilderTest {
     assertType(DiffTypes.INSERTED, r.diffs[3]);
     assertNull(r.diffs[4]);
 
-    assertSame(left.document.lines[1], r.lines[1]);
-    assertSame(right.document.lines[1], r.lines[2]);
-    assertSame(right.document.lines[2], r.lines[3]);
+    assertEquals(left.document.lines[1].makeString(), r.lines[1].makeString());
+    assertEquals(right.document.lines[1].makeString(), r.lines[2].makeString());
+    assertEquals(right.document.lines[2].makeString(), r.lines[3].makeString());
+    assertNotSame(left.document.lines[1], r.lines[1]);
+    assertNotSame(right.document.lines[1], r.lines[2]);
+    assertNotSame(right.document.lines[2], r.lines[3]);
+
+    // Reverse mapping covers every row of every range type.
+    assertEquals(InlineDocumentBuilder.SIDE_RIGHT, r.originSide[0]);
+    assertEquals(0, r.originLine[0]);
+    assertEquals(InlineDocumentBuilder.SIDE_LEFT, r.originSide[1]);
+    assertEquals(1, r.originLine[1]);
+    assertEquals(InlineDocumentBuilder.SIDE_RIGHT, r.originSide[2]);
+    assertEquals(1, r.originLine[2]);
+    assertEquals(InlineDocumentBuilder.SIDE_RIGHT, r.originSide[3]);
+    assertEquals(2, r.originLine[3]);
+    assertEquals(InlineDocumentBuilder.SIDE_RIGHT, r.originSide[4]);
+    assertEquals(3, r.originLine[4]);
 
     assertEquals(1, r.hunkCount());
     assertEquals(1, r.hunkAnchorRows[0]);
     assertEquals(4, r.hunkEndRows[0]);
+  }
+
+  @Test
+  void mutatingSyntheticLineDoesNotAffectOriginModel() {
+    Model left = model("a\nb\nc");
+    Model right = model("a\nb\nc");
+    DiffInfo info = info(
+        new DiffRange(0, 3, 0, 3, DiffTypes.DEFAULT)
+    );
+
+    InlineDocumentBuilder.Result r = InlineDocumentBuilder.build(left, right, info);
+    String before = right.document.lines[1].makeString();
+
+    r.lines[1].insertAt(0, "Z");
+
+    assertEquals(before, right.document.lines[1].makeString(),
+        "right doc line must be untouched after editing the synthetic copy");
   }
 
   @Test
@@ -148,10 +202,6 @@ class InlineDocumentBuilderTest {
     assertNotNull(actual, "expected LineDiff with type " + DiffTypes.name(expected));
     assertEquals(expected, actual.type,
         "expected " + DiffTypes.name(expected) + " got " + DiffTypes.name(actual.type));
-  }
-
-  private static void assertSame(CodeLine expected, CodeLine actual) {
-    assertEquals(true, expected == actual, "expected same CodeLine reference");
   }
 
   private static Model model(String text) {
