@@ -139,9 +139,14 @@ public class MergeButtons implements Disposable {
           iconTextureMarginL,
           acceptReject ? iconTextureMarginM : iconTextureMarginR);
 
-    if (acceptReject && texture2 == null)
-      texture2 = renderIcon(g, c.cleartype, acceptCh,
+    if (acceptReject && texture2 == null) {
+      // Two-icon Accept/Reject pair: the secondary glyph is the opposite of
+      // the primary so the user sees ✔✖ (or ✖✔ when mirrored) rather than
+      // two identical ticks.
+      char icon2 = icon == acceptCh ? rejectCh : acceptCh;
+      texture2 = renderIcon(g, c.cleartype, icon2,
           iconTextureMarginM, iconTextureMarginR);
+    }
 
     g.enableScissor(pos, size);
     int x = pos.x;
@@ -316,8 +321,9 @@ public class MergeButtons implements Disposable {
     if (isAcceptReject()) {
       float marginL = (iconTextureMarginL + iconTextureMarginM) * dpr;
       float marginR = (iconTextureMarginM + iconTextureMarginR) * dpr;
+      char icon2 = icon == acceptCh ? rejectCh : acceptCh;
       return mCanvas.measurePx(font, String.valueOf(icon), marginL) +
-          mCanvas.measurePx(font, String.valueOf(acceptCh), marginR);
+          mCanvas.measurePx(font, String.valueOf(icon2), marginR);
     } else {
       float margin = (iconTextureMarginL + iconTextureMarginR) * dpr;
       return mCanvas.measurePx(font, String.valueOf(icon), margin);

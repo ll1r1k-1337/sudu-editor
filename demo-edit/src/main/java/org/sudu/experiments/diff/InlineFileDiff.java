@@ -13,20 +13,23 @@ public class InlineFileDiff extends WindowScene {
 
   protected InlineDiffWindow w;
 
+  // No-arg ctor is used by the desktop TestSceneSelector — load the hardcoded
+  // sample so the scene is visually verifiable without a file picker.
   public InlineFileDiff(SceneApi api) {
     this(api, EditorConst.DEFAULT_DISABLE_PARSER);
+    loadSampleModel();
   }
 
+  // Two-arg ctor is used by the JS bridge, which supplies models via setModel.
+  // Loading sample content here would race with the caller's setModel and apply
+  // stale DiffRanges from the sample to the user-supplied (smaller) models.
   public InlineFileDiff(SceneApi api, boolean disableParser) {
     super(api);
     var theme = EditorColorScheme.darkIdeaColorScheme();
     w = new InlineDiffWindow(windowManager, theme, this::menuFonts, disableParser);
     w.processEsc = false;
-    loadSampleModel();
   }
 
-  // Hardcoded sample content so the desktop test scene is visually verifiable
-  // without a file picker. The JS bridge uses the programmatic setModel API.
   private void loadSampleModel() {
     String left =
         "This is an experimental project\n" +

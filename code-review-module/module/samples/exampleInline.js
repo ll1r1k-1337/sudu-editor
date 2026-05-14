@@ -8,7 +8,8 @@ console.log("Test: threadPool.getNumThreads()=", threadPool.getNumThreads())
 const codeReview = editorApi.newInlineCodeReview({
     containerId: "editor",
     workers: threadPool,
-    disableParser: true
+    disableParser: true,
+    readonly: false
 });
 
 const controlPanel = initControlPanel(document.getElementById("editor"))

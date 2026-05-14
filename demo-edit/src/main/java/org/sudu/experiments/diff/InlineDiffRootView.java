@@ -19,7 +19,6 @@ import org.sudu.experiments.math.V2i;
 import org.sudu.experiments.ui.window.ViewArray;
 import org.sudu.experiments.ui.window.WindowManager;
 
-import java.util.Arrays;
 import java.util.function.IntConsumer;
 
 class InlineDiffRootView extends ViewArray {
@@ -146,27 +145,26 @@ class InlineDiffRootView extends ViewArray {
 
   void sendToDiff() {
     if (leftModel == null || rightModel == null) return;
+    final Model reqL = leftModel, reqR = rightModel;
     DiffUtils.findDiffs(
-        leftModel.document,
-        rightModel.document,
+        reqL.document,
+        reqR.document,
         true,
         new int[0], new int[0],
-        this::onDiffResult,
+        (info, versions) -> onDiffResult(info, versions, reqL, reqR),
         ui.windowManager.uiContext.window.worker()
     );
   }
 
-  private int[] docVersions() {
-    return new int[]{
-        leftModel.document.version(),
-        rightModel.document.version()
-    };
-  }
-
-  void onDiffResult(DiffInfo info, int[] versions) {
+  // Reject stale worker results. Comparing only versions is not enough: two
+  // freshly-created Models both start at version 0, so a result computed
+  // against an old pair will pass an int-equals check after setModel swaps
+  // the references. Capture the requested Models and compare by identity.
+  void onDiffResult(DiffInfo info, int[] versions, Model reqL, Model reqR) {
     if (disposed) return;
-    if (leftModel == null || rightModel == null) return;
-    if (!Arrays.equals(versions, docVersions())) return;
+    if (reqL != leftModel || reqR != rightModel) return;
+    if (versions[0] != reqL.document.version()
+        || versions[1] != reqR.document.version()) return;
     diffInfo = info;
     rebuild();
   }
